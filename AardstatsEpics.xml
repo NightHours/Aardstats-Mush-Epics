@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE muclient>
+<!-- Saved on Thursday, September 14, 2023, 5:59 PM -->
+<!-- MuClient version 5.07-pre -->
+
+
+<muclient>
+<plugin
+   name="AardstatsEpics"
+   author="TrEz"
+   id="5540cc14556913e789ccbc2a"
+   language="Lua"
+   purpose="Pull &amp; Display Epics - listday, listday [channel name]"
+   save_state="y"
+   date_written="2023-09-14 17:57:57"
+   requires="5.07"
+   version="1.0"
+   >
+
+</plugin>
+
+
+<!--  Get our standard constants -->
+
+<include name="constants.lua"/>
+
+
+<aliases>
+  <alias
+    match="^listday(\s)?([a-zA-Z]+)?$"
+    enabled="y"
+    send_to="12"
+    sequence="100"
+    regexp="y"
+  >
+    <send>
+      getEpicsFromApi("%2")
+    </send>
+  </alias>
+</aliases>
+
+<script>
+   <![CDATA[
+
+      -- Output channel, defaults to echo
+      channelOutput = "echo"
+
+      -- Get epics from API and display them
+      function getEpicsFromApi(channel)
+         local async = require("async")
+
+         if channel ~= "" then channelOutput = channel else channelOutput = 'echo' end
+
+         async.doAsyncRemoteRequest("https://lightclan.net:3000/api/public/epics-today", handleTodaysEpics , "HTTPS", 5, nil, nil)
+      end
+
+      -- Parse response
+      function handleTodaysEpics(retval, page, status, headers, full_status, requested_url, request_body)
+         local json = require("json")
+         local parsedEpics = json.decode(page);
+
+         if parsedEpics and #parsedEpics > 0 then
+            for i, v in ipairs(parsedEpics) do
+               Execute(string.format("%s @W%s@w - @x215%s@w by @x153%s@w [note #@W%s@w]", channelOutput, v["startTime"], v["epics"], v["poster"], v["noteId"]))
+            end
+
+            else
+               Execute(string.format("%s @x153No remaining epics today@w", channelOutput))
+         end
+
+      end
+   ]]>
+</script>
+
+</muclient>
