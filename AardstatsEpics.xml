@@ -51,7 +51,7 @@
 
          if channel ~= "" then channelOutput = channel else channelOutput = 'echo' end
 
-         async.doAsyncRemoteRequest("https://lightclan.net:3000/api/public/epics-today", handleTodaysEpics , "HTTPS", 5, nil, nil)
+         async.doAsyncRemoteRequest("https://lightclan.net/api/public/epics-today", handleTodaysEpics , "HTTPS", 5, nil, nil)
       end
 
       -- Parse response
