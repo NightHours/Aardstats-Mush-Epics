@@ -26,6 +26,36 @@
 
 
 <aliases>
+   <alias
+      match="^listhelp$"
+      enabled="y"
+      regexp="y"
+      send_to="12"
+      sequence="100"
+      >
+      <send>
+         -- Header Row: Command | Description
+         ColourNote("green","black",string.format("%-30s","Command"),"white","black","Description")
+         ColourNote("green","black","-------------------------------------------------")
+         
+         -- listhelp command
+         ColourNote("yellow","black",string.format("%-30s","listhelp"),"white","black","Shows this help file.")
+         
+         -- listday command
+         ColourNote("yellow","black",string.format("%-30s","listday [channel]"),"white","black","Lists epics for today. (listday)")
+         
+         -- listnext command
+         ColourNote("yellow","black",string.format("%-30s","listnext [channel]"),"white","black","Lists next epic. (listnext)")
+         
+         -- listall command
+         ColourNote("yellow","black",string.format("%-30s","listall [channel]"),"white","black","Lists all remaining epics. (listall)")
+         
+         -- listepic command
+         ColourNote("yellow","black",string.format("%-30s","listepic [NAME] [channel]"),"white","black","Shows specific epics only (listepic inferno)")
+         
+         ColourNote("green","black","-------------------------------------------------")
+      </send>
+   </alias>
   <alias
     match="^listday(\s)?([a-zA-Z]+)?$"
     enabled="y"
@@ -34,7 +64,40 @@
     regexp="y"
   >
     <send>
-      getEpicsFromApi("%2")
+      getEpicsToday("%2")
+    </send>
+  </alias>
+   <alias
+    match="^listnext(\s)?([a-zA-Z]+)?$"
+    enabled="y"
+    send_to="12"
+    sequence="100"
+    regexp="y"
+  >
+    <send>
+      getEpicsNext("%2")
+    </send>
+  </alias>
+  <alias
+    match="^listall(\s)?([a-zA-Z]+)?$"
+    enabled="y"
+    send_to="12"
+    sequence="100"
+    regexp="y"
+  >
+    <send>
+      getEpicsAll("%2")
+    </send>
+  </alias>
+  <alias
+    match="^listepic\s+(\S+)(?:\s+(\S+))?$"
+    enabled="y"
+    send_to="12"
+    sequence="100"
+    regexp="y"
+  >
+    <send>
+      getEpic("%1", "%2")
     </send>
   </alias>
 </aliases>
@@ -45,27 +108,54 @@
       -- Output channel, defaults to echo
       channelOutput = "echo"
 
-      -- Get epics from API and display them
-      function getEpicsFromApi(channel)
+      -- Get specific epic
+      function getEpic(epic, channel)
          local async = require("async")
 
          if channel ~= "" then channelOutput = channel else channelOutput = 'echo' end
 
-         async.doAsyncRemoteRequest("https://lightclan.net/api/public/epics-today", handleTodaysEpics , "HTTPS", 5, nil, nil)
+         async.doAsyncRemoteRequest("https://lightclan.net/api/public/epics/" .. epic, handleAPIResponse , "HTTPS", 5, nil, nil)
+      end
+
+      -- Get all epics
+      function getEpicsAll(channel)
+         local async = require("async")
+
+         if channel ~= "" then channelOutput = channel else channelOutput = 'echo' end
+
+         async.doAsyncRemoteRequest("https://lightclan.net/api/public/epics", handleAPIResponse , "HTTPS", 5, nil, nil)
+      end
+
+      -- Get next epic
+      function getEpicsNext(channel)
+         local async = require("async")
+
+         if channel ~= "" then channelOutput = channel else channelOutput = 'echo' end
+
+         async.doAsyncRemoteRequest("https://lightclan.net/api/public/epics-next", handleAPIResponse , "HTTPS", 5, nil, nil)
+      end
+
+      -- Get today's epics
+      function getEpicsToday(channel)
+         local async = require("async")
+
+         if channel ~= "" then channelOutput = channel else channelOutput = 'echo' end
+
+         async.doAsyncRemoteRequest("https://lightclan.net/api/public/epics-today", handleAPIResponse , "HTTPS", 5, nil, nil)
       end
 
       -- Parse response
-      function handleTodaysEpics(retval, page, status, headers, full_status, requested_url, request_body)
+      function handleAPIResponse(retval, page, status, headers, full_status, requested_url, request_body)
          local json = require("json")
          local parsedEpics = json.decode(page);
 
          if parsedEpics and #parsedEpics > 0 then
             for i, v in ipairs(parsedEpics) do
-               Execute(string.format("%s @W%s@w - @x215%s@w by @x153%s@w [note #@W%s@w]", channelOutput, v["startTime"], v["epics"], v["poster"], v["noteId"]))
+               Execute(string.format("%s @W%s %s@w - @x215%s@w by @x153%s@w [note #@W%s@w]", channelOutput, v["startDay"], v["startTime"], v["epics"], v["poster"], v["noteId"]))
             end
 
             else
-               Execute(string.format("%s @x153No remaining epics today@w", channelOutput))
+               Execute(string.format("%s @x153No remaining epics@w", channelOutput))
          end
 
       end
